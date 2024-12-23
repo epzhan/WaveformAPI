@@ -1,0 +1,7 @@
+apiVersion: 1
+
+dataSources:
+  - name: WaveformPrometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus-service:9090
