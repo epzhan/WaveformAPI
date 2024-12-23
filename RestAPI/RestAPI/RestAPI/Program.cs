@@ -1,7 +1,18 @@
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+
 var builder = WebApplication.CreateBuilder(args);
 
 ILogger logger = SetupLogger();
 logger.LogInformation("# WAVEFORM API - REST - Start #");
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource.AddService(serviceName: "aaa"))
+    .WithMetrics(metrics =>
+    metrics.AddAspNetCoreInstrumentation()
+    .AddRuntimeInstrumentation()
+    .AddPrometheusExporter()
+    );
 
 // Add services to the container.
 
@@ -22,11 +33,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
-app.MapControllers();
+app.UseRouting();
+app.UseEndpoints(endpoints => app.MapControllers());
 
 app.Run();
 

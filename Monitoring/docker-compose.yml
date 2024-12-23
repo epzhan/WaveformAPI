@@ -1,0 +1,58 @@
+services:
+  waveform-api-service:
+    container_name: waveform-api-app
+    build: ..\RestAPI\RestAPI\RestAPI\
+    restart: always
+    networks:
+      - monitoring-network
+    ports:
+      - 8080:8080
+    depends_on:
+      - db-service
+  
+  prometheus-service:
+    container_name: waveform-prometheus
+    image: prom/prometheus:latest
+    networks:
+      - monitoring-network
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - waveform-api-service
+
+  grafana-service:
+    container_name: waveform-grafana
+    image: grafana/grafana:latest
+    networks:
+      - monitoring-network
+    ports:
+      - 3000:3000
+    volumes:
+      - ./grafana-provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus-service
+
+  db-service:
+    container_name: waveform-db
+    image: postgres:latest
+    networks:
+      - monitoring-network
+    ports:
+      - 5432:5432
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: develop
+      POSTGRES_DB: waveform
+    volumes:
+      - waveform-db-data:/var/lib/postgres
+
+networks:
+  monitoring-network:
+    name: monitoring-network
+    driver: bridge
+
+volumes:
+  waveform-db-data:
