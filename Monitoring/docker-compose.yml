@@ -1,3 +1,12 @@
+networks:
+  monitoring-network:
+    name: monitoring-network
+    driver: bridge
+
+volumes:
+  waveform-db-data:
+
+
 services:
   waveform-api-service:
     container_name: waveform-api-app
@@ -6,21 +15,23 @@ services:
     networks:
       - monitoring-network
     ports:
-      - 8080:8080
+      - "8080:8080"
+      - "8081:8081"
     depends_on:
       - db-service
-  
+      - prometheus-service
+
+## Observability ##
+
   prometheus-service:
     container_name: waveform-prometheus
     image: prom/prometheus:latest
     networks:
       - monitoring-network
     ports:
-      - 9090:9090
+      - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    depends_on:
-      - waveform-api-service
 
   grafana-service:
     container_name: waveform-grafana
@@ -28,7 +39,7 @@ services:
     networks:
       - monitoring-network
     ports:
-      - 3000:3000
+      - "3000:3000"
     volumes:
       - ./grafana-provisioning:/etc/grafana/provisioning
     depends_on:
@@ -40,7 +51,7 @@ services:
     networks:
       - monitoring-network
     ports:
-      - 5432:5432
+      - "5432:5432"
     restart: always
     environment:
       POSTGRES_USER: postgres
@@ -49,10 +60,28 @@ services:
     volumes:
       - waveform-db-data:/var/lib/postgres
 
-networks:
-  monitoring-network:
-    name: monitoring-network
-    driver: bridge
+  # api-otel:
+  #   build: ./api-otel
+  #   ports:
+  #     - "5002:5000"
+  #     - "5003:5001"
+  #   environment:
+  #     - ASPNETCORE_ENVIRONMENT=Development
+  #     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+  #     - OTEL_TRACES_EXPORTER=otlp
+  #     - OTEL_LOGS_EXPORTER=otlp
+  #     - OTEL_METRICS_EXPORTER=otlp
+  #   depends_on:
+  #     - otel-collector
 
-volumes:
-  waveform-db-data:
+  otel-collector:
+    image: otel/opentelemetry-collector
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yml
+    command: ["--config", "/etc/otel-collector-config.yml"]
+    ports:
+      - "4317:4317"
+      - "8888:8888"
+      - "9464:9464"
+    depends_on:
+      - prometheus-service
