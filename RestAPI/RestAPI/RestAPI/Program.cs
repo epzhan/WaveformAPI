@@ -32,6 +32,7 @@ builder.Services
             options.Endpoint = new Uri(tracingOtlpEndpoint);
             options.Protocol = OtlpExportProtocol.Grpc;
         })
+        .AddPrometheusExporter()
     )
     .WithTracing(tracing =>
     {
@@ -108,7 +109,7 @@ if (app.Environment.IsDevelopment())
 }
 
 //app.MapPrometheusScrapingEndpoint();
-//app.UseOpenTelemetryPrometheusScrapingEndpoint();
+app.UseOpenTelemetryPrometheusScrapingEndpoint();
 app.UseHttpsRedirection();
 app.UseAuthorization();
 
