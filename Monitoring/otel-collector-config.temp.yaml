@@ -1,0 +1,71 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      http:
+        endpoint: "0.0.0.0:4318"
+  
+  # Collector metrics
+  # prometheus:
+  #   config:
+  #     scrape_configs:
+  #       - job_name: 'otel-collector'
+  #         scrape_interval: 10s
+  #         static_configs:
+  #           - targets: ['0.0.0.0:8888']
+
+# processors:
+#   batch:
+#     timeout: 1s
+#   memory_limiter:
+#     check_interval: 1s
+#     limit_mib: 400
+
+exporters:
+  # logging:
+  #   loglevel: debug
+
+  debug:
+  otlp:
+    endpoint: jaeger-service:4317
+    tls:
+      insecure: true
+
+  # prometheus:
+  #   endpoint: "0.0.0.0:9464"
+  otlphttp/prometheus:
+    endpoint: "http://prometheus-service:9090/api/v1/otlp"
+    tls:
+      insecure: true
+
+  loki:
+    endpoint: "http://loki-service:3100/loki/api/v1/push"
+    default_labels_enabled:
+      exporter: false
+      job: true
+
+# extensions:
+#   health_check:
+#   pprof:
+#     endpoint: :1888
+#   zpages:
+#     endpoint: :55679
+
+service:
+  # extensions: [pprof, zpages, health_check]
+  pipelines:
+    # traces:
+    #   receivers: [otlp]
+    #   processors: [batch]
+    #   exporters: [otlp, debug]  # Export traces to Jaeger
+
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug, otlphttp/prometheus]  # Export metrics to Prometheus
+
+    # logs:
+    #   receivers: [otlp]
+    #   processors: [batch]
+    #   exporters: [debug, loki]  # Export logs to Loki

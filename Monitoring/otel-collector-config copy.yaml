@@ -19,7 +19,7 @@ exporters:
     verbosity: detailed
 
   otlp/jaeger:
-    endpoint: "jaeger:4317"
+    endpoint: "http://jaeger:4317"
     tls:
       insecure: true
 
@@ -52,7 +52,7 @@ service:
     traces:
       receivers: [zipkin, otlp]
       processors: [batch, memory_limiter]
-      exporters: [zipkin, otlp/jaeger]  # Export metrics to Prometheus
+      exporters: [zipkin, otlphttp/jaeger]  # Export metrics to Prometheus
     
     metrics:
       receivers: [otlp]

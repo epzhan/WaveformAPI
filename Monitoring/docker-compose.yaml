@@ -18,15 +18,37 @@ services:
     ports:
       - "8080:8080"
       - "8081:8081"
-    depends_on:
-      - db-service
-      - prometheus-service
-      - otel-collector
+    # depends_on:
+    #   - db-service
+    #   - prometheus-service
+    #   - otel-collector
 
-## Observability ##
+    ## Observability ##
+
+  otel-collector:
+    container_name: otel-collector
+    image: otel/opentelemetry-collector-contrib:latest
+    networks:
+      - monitoring-network
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: [ "--config=/etc/otel-collector-config.yaml" ]
+    ports:
+      - "13133:13133" # health_check extension
+      - "4317:4317" # OTLP gRPC Receiver
+      - "4318:4318" # OTLP HTTP Receiver
+      - "9411" # Zipkin receiver
+      - "8888" # OpenTelemetry internal metrics
+      - "9464" # Prometheus metrics
+    depends_on:
+      - jaeger
+    #   - prometheus-service
+    #   - loki-service
+
+    ## Metrics ##
 
   prometheus-service:
-    container_name: waveform-prometheus
+    container_name: prometheus
     image: prom/prometheus:latest
     networks:
       - monitoring-network
@@ -35,17 +57,7 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
 
-  grafana-service:
-    container_name: waveform-grafana
-    image: grafana/grafana:latest
-    networks:
-      - monitoring-network
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana-provisioning:/etc/grafana/provisioning
-    depends_on:
-      - prometheus-service
+  ## Logs ##
 
   loki-service:
     container_name: waveform-loki
@@ -59,50 +71,59 @@ services:
       - ./loki-config.yaml:/etc/loki/loki-config.yaml
     command: -config.file=/etc/loki/loki-config.yaml
 
-  db-service:
-    container_name: waveform-db
-    image: postgres:latest
+  # db-service:
+  #   container_name: waveform-db
+  #   image: postgres:latest
+  #   networks:
+  #     - monitoring-network
+  #   ports:
+  #     - "5432:5432"
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: develop
+  #     POSTGRES_DB: waveform
+  #   volumes:
+  #     - waveform-db-data:/var/lib/postgres
+
+  ## Traces ##
+
+  zipkin:
+    container_name: zipkin
+    image: openzipkin/zipkin
     networks:
       - monitoring-network
     ports:
-      - "5432:5432"
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: develop
-      POSTGRES_DB: waveform
-    volumes:
-      - waveform-db-data:/var/lib/postgres
+      - "9411:9411"
 
-  otel-collector:
-    container_name: waveform-otel-collector
-    image: otel/opentelemetry-collector
-    networks:
-      - monitoring-network
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    command: ["--config", "/etc/otel-collector-config.yaml"]
-    ports:
-      - "4317:4317"   # OTLP gRPC Receiver
-      - "4318:4318"   # OTLP HTTP Receiver
-      - "8888:8888"   # OpenTelemetry internal metrics
-      - "9464:9464"   # Prometheus metrics
-    depends_on:
-      - prometheus-service
-      - loki-service
-
-  jaeger-service:
-    container_name: waveform-jaeger
+  jaeger:
+    container_name: jaeger
     image: jaegertracing/all-in-one:latest
     networks:
       - monitoring-network
     ports:
-      - "16686:16686"  # Jaeger UI
-      - "14268:14268"  # Jaeger HTTP Collector
-      - "14317:14317"    # OTLP Receiver for Traces
-      - "14250:14250"  # Jaeger gRPC for Traces
+      - "16686:16686" # Jaeger UI
+      - "4317" # OTLP gRPC default port
+      - "4318" # OTLP HTTP default port (protobuf)
+    restart: unless-stopped
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
       - COLLECTOR_OTLP_ENABLED=true
+    # depends_on:
+    #   - otel-collector
+
+    ## Analytics and Visualization ##
+
+  grafana-service:
+    container_name: waveform-grafana
+    image: grafana/grafana:latest
+    networks:
+      - monitoring-network
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-provisioning:/etc/grafana/provisioning
     depends_on:
+      - prometheus-service
+      - loki-service
       - otel-collector
