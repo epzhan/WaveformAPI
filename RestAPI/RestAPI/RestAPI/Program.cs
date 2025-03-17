@@ -37,26 +37,20 @@ builder.Services
     .WithTracing(tracing =>
     {
         tracing
+        .AddSource("RestAPI.WeatherForecase")
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
-        .AddConsoleExporter();
-
-        if (tracingOtlpEndpoint != null)
+        .AddConsoleExporter()
+        .AddOtlpExporter(otlpOptions =>
         {
-            tracing.AddOtlpExporter(otlpOptions =>
-            {
-                otlpOptions.Endpoint = new Uri(tracingOtlpEndpoint);
-                otlpOptions.Protocol = OtlpExportProtocol.Grpc;
-            });
-        }
-        else
-        {
-            tracing.AddConsoleExporter();
-        }
+            otlpOptions.Endpoint = new Uri(tracingOtlpEndpoint);
+            otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+        });
     });
 
 builder.Logging.ClearProviders();
-builder.Logging.AddOpenTelemetry(logging => {
+builder.Logging.AddOpenTelemetry(logging =>
+{
     logging
     .SetResourceBuilder(resource)
     .AddConsoleExporter()
@@ -95,7 +89,8 @@ var app = builder.Build();
 //app.UseSerilogRequestLogging();
 //logger.LogInformation($"Environment -- {app.Environment}");
 app.MapHealthChecks("/health");
-app.MapGet("/", () => {
+app.MapGet("/", () =>
+{
     var logger = app.Services.GetRequiredService<ILogger<Program>>();
     logger.LogInformation("Processing request for / endpoint"); // Example log
     return "Hello, OTel Collector & Console!";

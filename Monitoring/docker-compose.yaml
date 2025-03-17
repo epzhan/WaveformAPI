@@ -42,8 +42,9 @@ services:
       - "9464" # Prometheus metrics
     depends_on:
       - jaeger
-    #   - prometheus-service
-    #   - loki-service
+      - zipkin
+      - prometheus-service
+      - loki-service
 
     ## Metrics ##
 
@@ -122,7 +123,10 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./grafana-provisioning:/etc/grafana/provisioning
+      - ./grafana.ini:/etc/grafana/grafana.ini
+      - ./dashboards:/var/lib/grafana/dashboards
+      - ./grafana-dashboard.yaml:/etc/grafana/provisioning/dashboards/dashboard.yaml
+      - ./grafana-datasource.yaml:/etc/grafana/provisioning/datasources/datasource.yaml
     depends_on:
       - prometheus-service
       - loki-service
