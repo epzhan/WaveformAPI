@@ -1,5 +1,5 @@
 receivers:
-  zipkin:
+  #zipkin:
   otlp:
     protocols:
       grpc:
@@ -28,8 +28,8 @@ exporters:
     tls:
       insecure: true
   
-  zipkin:
-    endpoint: "http://zipkin:9411/api/v2/spans"
+  # zipkin:
+  #   endpoint: "http://zipkin:9411/api/v2/spans"
 
   otlphttp/prometheus:
     endpoint: "http://prometheus-service:9090/api/v1/otlp"
@@ -50,9 +50,9 @@ service:
   extensions: [health_check]
   pipelines:
     traces:
-      receivers: [zipkin, otlp]
+      receivers: [otlp]
       processors: [batch, memory_limiter]
-      exporters: [zipkin, otlp/jaeger]  # Export metrics to Prometheus 
+      exporters: [otlp/jaeger]  # Export metrics to Prometheus # zipkin
     
     metrics:
       receivers: [otlp]

@@ -1,5 +1,7 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using RestAPI.Service;
 
 namespace RestAPI.Controllers
 {
@@ -15,10 +17,12 @@ namespace RestAPI.Controllers
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
+        private readonly IWeatherService _weatherService;
 
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public WeatherForecastController(ILogger<WeatherForecastController> logger, IWeatherService weatherService)
         {
             _logger = logger;
+            _weatherService = weatherService;
         }
 
         [HttpGet(Name = "GetWeatherForecast")]
@@ -44,25 +48,36 @@ namespace RestAPI.Controllers
             {
                 activity?.SetTag("id", id);
                 activity?.SetTag("name", name);
-                await StepOne();
+                
+                var forecasts = await StepOne();
                 activity?.AddEvent(new ActivityEvent("Part way there"));
+                
                 await StepTwo();
                 activity?.AddEvent(new ActivityEvent("Done now"));
 
                 // Pretend something went wrong
                 activity?.SetStatus(ActivityStatusCode.Ok, "everything done");
-            }
+                        
+                var summaries = forecasts.Select(i => i.Summary).ToList();
+                var result = String.Join(",", summaries);
 
-            return "123";
+                return result;
+            }
         }
 
-        private async Task StepOne()
+        private async Task<List<WeatherForecast>> StepOne()
         {
             _logger.LogInformation("StepOne#");
 
             using (var activity = source.StartActivity("StepOne"))
             {
                 await Task.Delay(1000);
+
+                activity?.AddEvent(new ActivityEvent("Generate new weather forecast"));
+
+                var forecasts = _weatherService.Get();
+
+                return forecasts;
             }
         }
 

@@ -4,8 +4,9 @@ networks:
     driver: bridge
 
 volumes:
-  waveform-db-data:
   loki-data:
+  prometheus-data:
+  waveform-db-data:
 
 
 services:
@@ -42,7 +43,6 @@ services:
       - "9464" # Prometheus metrics
     depends_on:
       - jaeger
-      - zipkin
       - prometheus-service
       - loki-service
 
@@ -56,7 +56,12 @@ services:
     ports:
       - "9090:9090"
     volumes:
+      - prometheus-data:/prometheus
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"  # Retain data for 30 days
 
   ## Logs ##
 
@@ -72,30 +77,15 @@ services:
       - ./loki-config.yaml:/etc/loki/loki-config.yaml
     command: -config.file=/etc/loki/loki-config.yaml
 
-  # db-service:
-  #   container_name: waveform-db
-  #   image: postgres:latest
+  ## Traces ##
+
+  # zipkin:
+  #   container_name: zipkin
+  #   image: openzipkin/zipkin
   #   networks:
   #     - monitoring-network
   #   ports:
-  #     - "5432:5432"
-  #   restart: always
-  #   environment:
-  #     POSTGRES_USER: postgres
-  #     POSTGRES_PASSWORD: develop
-  #     POSTGRES_DB: waveform
-  #   volumes:
-  #     - waveform-db-data:/var/lib/postgres
-
-  ## Traces ##
-
-  zipkin:
-    container_name: zipkin
-    image: openzipkin/zipkin
-    networks:
-      - monitoring-network
-    ports:
-      - "9411:9411"
+  #     - "9411:9411"
 
   jaeger:
     container_name: jaeger
@@ -110,8 +100,25 @@ services:
     environment:
       - COLLECTOR_ZIPKIN_HTTP_PORT=9411
       - COLLECTOR_OTLP_ENABLED=true
+    #   - SPAN_STORAGE_TYPE=postgres
+    #   - POSTGRES_CONNECTION_STRING=postgresql://postgres:develop@waveform-db:5432/waveform?sslmode=disable
     # depends_on:
-    #   - otel-collector
+    #   - db-service
+
+  # db-service:
+  #   container_name: waveform-db
+  #   image: postgres:latest
+  #   networks:
+  #     - monitoring-network
+  #   ports:
+  #     - "5432:5432"
+  #   restart: always
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: develop
+  #     POSTGRES_DB: waveform
+  #   volumes:
+  #     - waveform-db-data:/var/lib/postgresql/data
 
     ## Analytics and Visualization ##
 
