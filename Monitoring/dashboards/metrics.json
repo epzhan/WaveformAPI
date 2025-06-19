@@ -1,0 +1,41 @@
+{
+    "title": "ASP.NET Core Application Metrics",
+    "panels": [
+      {
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "targets": [{
+          "expr": "process_cpu_usage_percent{job=\"otel-collector\"} / 1048576",
+          "legendFormat": "{{instance}} CPU Usage"
+        }],
+        "unit": "percent",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      },
+      {
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "process_memory_usage_bytes{job=\"otel-collector\"} / 1048576",
+            "legendFormat": "Working Set"
+          },
+          {
+            "expr": "process_memory_virtual_bytes{job=\"otel-collector\"} / 1048576",
+            "legendFormat": "Virtual Memory"
+          }
+        ],
+        "unit": "bytes",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      },
+      {
+        "title": "GC Memory by Generation",
+        "type": "timeseries",
+        "targets": [{
+          "expr": "sum by (generation) (process_runtime_dotnet_gc_heap_size_bytes{job=\"otel-collector\"})",
+          "legendFormat": "Gen {{generation}}"
+        }],
+        "unit": "bytes",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8}
+      }
+    ]
+  }

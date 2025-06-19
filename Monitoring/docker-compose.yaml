@@ -9,7 +9,7 @@ volumes:
   waveform-db-data:
 
 
-services:
+services:  
   waveform-api-service:
     container_name: waveform-api-app
     build: ..\RestAPI\RestAPI\RestAPI\
@@ -28,7 +28,7 @@ services:
 
   otel-collector:
     container_name: otel-collector
-    image: otel/opentelemetry-collector-contrib:latest
+    image: otel/opentelemetry-collector-contrib:0.121.0
     networks:
       - monitoring-network
     volumes:
@@ -50,7 +50,7 @@ services:
 
   prometheus-service:
     container_name: prometheus
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.2.1
     networks:
       - monitoring-network
     ports:
@@ -62,12 +62,13 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=30d"  # Retain data for 30 days
+      - "--web.enable-otlp-receiver"
 
   ## Logs ##
 
   loki-service:
-    container_name: waveform-loki
-    image: grafana/loki:latest
+    container_name: loki
+    image: grafana/loki:3.4.2
     networks:
       - monitoring-network
     ports:
@@ -75,7 +76,7 @@ services:
     volumes:
       - loki-data:/loki
       - ./loki-config.yaml:/etc/loki/loki-config.yaml
-    command: -config.file=/etc/loki/loki-config.yaml
+    command: ["-config.file=/etc/loki/loki-config.yaml", "-config.expand-env=true"]
 
   ## Traces ##
 
@@ -89,7 +90,7 @@ services:
 
   jaeger:
     container_name: jaeger
-    image: jaegertracing/all-in-one:latest
+    image: jaegertracing/all-in-one:1.67.0
     networks:
       - monitoring-network
     ports:
@@ -123,8 +124,8 @@ services:
     ## Analytics and Visualization ##
 
   grafana-service:
-    container_name: waveform-grafana
-    image: grafana/grafana:latest
+    container_name: grafana
+    image: grafana/grafana:11.5.2
     networks:
       - monitoring-network
     ports:

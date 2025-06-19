@@ -6,14 +6,28 @@ receivers:
         endpoint: "0.0.0.0:4317"
       http:
         endpoint: "0.0.0.0:4318"
+        cors:
+          allowed_origins:
+            # - http://localhost:4200
+            - http://*
+            - https://*
+          allowed_headers:
+            - custom-header
+            - content-type
+            - x-opentelemetry-trace-id
+            - x-opentelemetry-span-id
+            - x-opentelemetry-parent-id
+            - user-agent
+            - authorization
+          max_age: 3600
 
 processors:
   batch:
     timeout: 10s
   memory_limiter:
-    check_interval: 1s
-    limit_mib: 300
-  
+    check_interval: 30s
+    limit_mib: 200
+
 exporters:
   debug:
     verbosity: detailed
@@ -23,19 +37,22 @@ exporters:
     tls:
       insecure: true
 
-  otlphttp/jaeger:
-    endpoint: "http://jaeger:4318"
-    tls:
-      insecure: true
-  
-  # zipkin:
-  #   endpoint: "http://zipkin:9411/api/v2/spans"
+  # otlphttp/jaeger:
+  #   endpoint: "http://jaeger:4318"
+  #   tls:
+  #     insecure: true
 
-  otlphttp/prometheus:
-    endpoint: "http://prometheus-service:9090/api/v1/otlp"
-    tls:
-      insecure: true
-  
+  zipkin:
+    endpoint: "http://zipkin:9411/api/v2/spans"
+
+  prometheus:
+    endpoint: "0.0.0.0:9464"
+
+  # otlphttp/prometheus:
+  #   endpoint: "http://prometheus-service:9090/api/v1/otlp"
+  #   tls:
+  #     insecure: true
+
   loki:
     endpoint: "http://loki-service:3100/loki/api/v1/push"
     default_labels_enabled:
@@ -44,7 +61,11 @@ exporters:
 
 extensions:
   health_check:
-    endpoint: "0.0.0.0:13133"
+    endpoint: 0.0.0.0:13133
+  # pprof:
+  #   endpoint: :1888
+  # zpages:
+  #   endpoint: :55679
 
 service:
   extensions: [health_check]
@@ -52,14 +73,14 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch, memory_limiter]
-      exporters: [otlp/jaeger]  # Export metrics to Prometheus # zipkin
-    
+      exporters: [otlp/jaeger, zipkin] 
+
     metrics:
       receivers: [otlp]
       processors: [batch, memory_limiter]
-      exporters: [debug, otlphttp/prometheus]  # Export metrics to Prometheus
+      exporters: [prometheus]
 
     logs:
       receivers: [otlp]
-      processors: [batch]
-      exporters: [debug, loki]  # Export logs to Loki
+      processors: [batch, memory_limiter]
+      exporters: [loki]
